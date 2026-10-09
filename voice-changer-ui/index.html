@@ -11,6 +11,8 @@
 </head>
 <body>
   <main class="app">
+    <!-- Invisible strip across the top; drags the window in the desktop app -->
+    <div class="drag-strip" aria-hidden="true"></div>
     <header class="app-header">
       <div class="brand">
         <svg class="brand-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -19,10 +21,10 @@
         <div class="brand-name">VoicePlay</div>
       </div>
       <div class="header-actions">
-        <button class="icon-btn" id="settings-btn" aria-label="Settings">
+        <button class="icon-btn" id="settings-btn" aria-label="Settings" aria-haspopup="dialog" aria-expanded="false" aria-controls="settings-pop">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.6 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg>
         </button>
-        <!-- Window controls; not wired up yet -->
+        <!-- Window controls; only work in the desktop app -->
         <div class="window-controls">
           <button class="win-btn" id="win-min" aria-label="Minimize">
             <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8h9"/></svg>
@@ -44,7 +46,7 @@
     <section class="voices" id="voices" role="radiogroup" aria-label="Voices"></section>
 
     <section class="talk-bar">
-      <button class="bar-btn" id="tune-btn" aria-label="Voice settings">
+      <button class="bar-btn" id="tune-btn" aria-label="Audio settings" aria-haspopup="dialog" aria-expanded="false" aria-controls="tune-pop">
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="M4 6.5h16M4 12h16M4 17.5h16"/>
           <circle cx="9" cy="6.5" r="2.6"/><circle cx="15.5" cy="12" r="2.6"/><circle cx="10.5" cy="17.5" r="2.6"/>
@@ -53,13 +55,51 @@
       <button class="mic" id="mic-btn" aria-pressed="false" aria-label="Tap to talk">
         <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="2.5" width="6" height="12" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7"/></svg>
       </button>
-      <button class="bar-btn" id="listen-btn" aria-label="Hear yourself">
+      <!-- Loopback test: hear your converted voice. Off (slashed) by default. -->
+      <button class="bar-btn" id="listen-btn" aria-pressed="false" aria-label="Hear yourself">
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path class="line" d="M7 9.5a5.5 5.5 0 0 1 11 0c0 3.2-2.6 4.3-3.4 6.3-.6 1.6-.8 2.7-1.6 3.6a2.6 2.6 0 0 1-4.3-1"/>
           <path class="line" d="M10 9.8a2.6 2.6 0 0 1 5.1-.6c.3 1.3-.6 2-1.4 2.6"/>
+          <path class="slash" d="M4.5 3.5l15 17"/>
         </svg>
       </button>
     </section>
+
+    <!-- Audio settings, opened from the sliders button in the mic bar -->
+    <div class="popover popover-tune" id="tune-pop" role="dialog" aria-label="Audio settings" hidden>
+      <label class="field">
+        <span class="field-label">Input</span>
+        <select id="input-device"></select>
+      </label>
+      <label class="field">
+        <span class="field-label">Output</span>
+        <select id="output-device"></select>
+      </label>
+      <label class="field">
+        <span class="field-label">Volume <output id="volume-value">100%</output></span>
+        <input type="range" id="volume" min="0" max="100" step="1" value="100">
+      </label>
+      <label class="field">
+        <span class="field-label">Pitch <output id="pitch-value">0</output></span>
+        <input type="range" id="pitch" min="-12" max="12" step="1" value="0">
+      </label>
+    </div>
+
+    <!-- App settings, opened from the gear in the header -->
+    <div class="popover popover-settings" id="settings-pop" role="dialog" aria-label="Settings" hidden>
+      <div class="field field-row">
+        <span class="field-label" id="noise-label">Reduce noise</span>
+        <button class="switch" id="noise" role="switch" aria-checked="false" aria-labelledby="noise-label"></button>
+      </div>
+      <label class="field">
+        <span class="field-label">GPU</span>
+        <select id="gpu"></select>
+      </label>
+      <label class="field">
+        <span class="field-label">Chunk</span>
+        <select id="chunk"></select>
+      </label>
+    </div>
   </main>
 
   <script src="cable.js"></script>

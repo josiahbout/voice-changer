@@ -143,6 +143,63 @@ body {
 .bar-btn circle { fill: var(--ink); }
 .bar-btn path.line { stroke-width: 1.8; stroke-linejoin: round; }
 
+/* Ear: slashed while the loopback test is off, purple once it's on */
+#listen-btn[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); }
+#listen-btn[aria-pressed="true"]:hover { background: var(--accent-deep); }
+#listen-btn[aria-pressed="true"] path { stroke: #fff; }
+#listen-btn[aria-pressed="true"] .slash { display: none; }
+.bar-btn[aria-expanded="true"], .icon-btn[aria-expanded="true"] { background: var(--accent-soft); }
+.bar-btn:focus-visible, .icon-btn:focus-visible, .win-btn:focus-visible, .mic:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 2px;
+}
+
+/* Pop-ups */
+.popover {
+  position: absolute; z-index: 5;
+  width: 280px; max-width: calc(100% - 32px);
+  padding: 16px;
+  display: grid; gap: 14px;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid var(--tile-border);
+  border-radius: 18px;
+  box-shadow: 0 18px 40px -16px rgba(80, 50, 140, 0.4), 0 2px 8px -2px rgba(80, 50, 140, 0.12);
+}
+.popover[hidden] { display: none; }
+.popover-tune { left: 50%; bottom: 96px; transform: translateX(-50%); }
+.popover-settings { top: 64px; right: 28px; }
+
+.field { display: grid; gap: 6px; }
+.field-row { grid-template-columns: 1fr auto; align-items: center; }
+.field-label {
+  display: flex; justify-content: space-between;
+  font-size: 13px; font-weight: 700; color: var(--ink);
+}
+.field-label output { font-weight: 700; color: var(--accent-deep); }
+
+.field select {
+  width: 100%; font: inherit; font-size: 13px; color: var(--ink);
+  padding: 8px 10px; border-radius: 10px;
+  border: 1px solid var(--tile-border); background: var(--tile);
+  cursor: pointer;
+}
+.field select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.field input[type="range"] { width: 100%; accent-color: var(--accent); cursor: pointer; }
+
+.switch {
+  position: relative; width: 40px; height: 24px; border-radius: 999px; border: 0; cursor: pointer;
+  background: #d9d3e4; transition: background .2s;
+}
+.switch::after {
+  content: ""; position: absolute; top: 3px; left: 3px;
+  width: 18px; height: 18px; border-radius: 50%; background: #fff;
+  box-shadow: 0 1px 3px rgba(40, 20, 80, 0.3);
+  transition: transform .2s;
+}
+.switch[aria-checked="true"] { background: var(--accent); }
+.switch[aria-checked="true"]::after { transform: translateX(16px); }
+.switch:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
 .mic {
   width: 60px; height: 60px; border-radius: 50%; border: 0; cursor: pointer; flex: none;
   background: radial-gradient(circle at 35% 30%, #b495ff, var(--accent) 50%, var(--accent-deep));
@@ -171,8 +228,14 @@ body {
   max-width: none; height: 100vh;
   border: 0; border-radius: 0; box-shadow: none;
 }
-.desktop .app-header { -webkit-app-region: drag; }
-.desktop .app-header button { -webkit-app-region: no-drag; }
+.drag-strip { display: none; }
+.desktop .drag-strip {
+  display: block; position: absolute; top: 0; left: 0; right: 0; height: 64px;
+  -webkit-app-region: drag;
+}
+/* The header sits above the strip so its buttons still get clicks */
+.desktop .app-header { position: relative; z-index: 1; -webkit-app-region: drag; }
+.desktop .app-header button, .desktop .popover { -webkit-app-region: no-drag; }
 
 /* Small screens */
 @media (max-width: 640px) {

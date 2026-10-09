@@ -38,6 +38,8 @@ if (!app.requestSingleInstanceLock()) {
     session.defaultSession.setPermissionRequestHandler((_contents, permission, callback) => {
       callback(permission === "media");
     });
+    // Same answer for permission checks, so the device lists show real names.
+    session.defaultSession.setPermissionCheckHandler((_contents, permission) => permission === "media");
     createWindow();
   });
 
