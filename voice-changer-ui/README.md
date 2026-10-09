@@ -25,7 +25,7 @@ npm run dist
 This makes `dist/VoicePlay Setup <version>.exe`. The installer also sets up VB-CABLE (the
 virtual audio cable) unless the user already has it, so it needs
 `virtual-cable/vendor/VBCABLE_Driver_Pack45.zip` from [vb-cable.com](https://vb-cable.com).
-That zip isn't committed; download it yourself. See [virtual-cable/README.md](virtual-cable/README.md).
+That zip is committed unmodified, as its licence allows. See [virtual-cable/README.md](virtual-cable/README.md).
 
 ## Layout
 

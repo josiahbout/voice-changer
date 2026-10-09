@@ -19,7 +19,9 @@ so it's set up by the VoicePlay installer.
 Until we have our own signed driver, the VoicePlay installer sets up
 [VB-CABLE](https://vb-cable.com) (VB-Audio, donationware):
 
-1. Download `VBCABLE_Driver_Pack45.zip` from vb-cable.com into `vendor/` (not committed).
+1. `vendor/VBCABLE_Driver_Pack45.zip` is the official pack from vb-cable.com, committed
+   unmodified (its licence allows sharing it as-is). To update it, replace it with a newer
+   pack and update the file name in `package.json` and `build/installer.nsh`.
 2. `npm run dist` puts the zip and `scripts/install-vbcable.ps1` / `uninstall-vbcable.ps1`
    into the installer.
 3. On install, `build/installer.nsh` runs `install-vbcable.ps1`. It skips machines that
@@ -65,7 +67,7 @@ PipeWire/PulseAudio can create a null sink + virtual source at runtime.
 
 ```
 virtual-cable/
-  vendor/                     VB-CABLE driver pack zip (downloaded, not committed)
+  vendor/                     VB-CABLE driver pack zip (official, unmodified) + credit
   driver/                     our own driver source (fetched, see below)
   scripts/
     fetch-driver-source.ps1   downloads AudioMirror at the pinned commit into driver/
