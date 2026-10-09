@@ -1,0 +1,55 @@
+{
+  "name": "voiceplay",
+  "productName": "VoicePlay",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Real-time voice changer for gamers",
+  "main": "electron/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win"
+  },
+  "devDependencies": {
+    "electron": "44.4.5",
+    "electron-builder": "26.15.3"
+  },
+  "build": {
+    "appId": "com.voiceplay.app",
+    "productName": "VoicePlay",
+    "files": [
+      "index.html",
+      "styles.css",
+      "app.js",
+      "cable.js",
+      "avatars/**",
+      "electron/**"
+    ],
+    "extraResources": [
+      {
+        "from": "virtual-cable/vendor/VBCABLE_Driver_Pack45.zip",
+        "to": "vbcable/VBCABLE_Driver_Pack45.zip"
+      },
+      {
+        "from": "virtual-cable/scripts/install-vbcable.ps1",
+        "to": "vbcable/install-vbcable.ps1"
+      },
+      {
+        "from": "virtual-cable/scripts/uninstall-vbcable.ps1",
+        "to": "vbcable/uninstall-vbcable.ps1"
+      }
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": true,
+      "allowElevation": true,
+      "include": "build/installer.nsh"
+    }
+  },
+  "allowScripts": {
+    "electron@44.4.5": true,
+    "electron-winstaller": false
+  }
+}

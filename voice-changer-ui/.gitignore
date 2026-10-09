@@ -1,0 +1,8 @@
+node_modules/
+dist/
+
+# Third-party driver code and binaries are fetched or downloaded, not committed.
+# See virtual-cable/README.md.
+virtual-cable/vendor/*.zip
+virtual-cable/driver/*
+!virtual-cable/driver/README.md
