@@ -65,6 +65,8 @@ def setupArgParser():
     parser.add_argument("--rmvpe", type=str, default="pretrain/rmvpe.pt", help="path to rmvpe")
     parser.add_argument("--rmvpe_onnx", type=str, default="pretrain/rmvpe.onnx", help="path to rmvpe onnx")
 
+    parser.add_argument("--reload", type=strtobool, default=False, help="restart the server when its code changes (development only; the file watcher costs most of a CPU core)")
+    parser.add_argument("--no_client", type=strtobool, default=False, help="run the web server in this process and don't open the native client (used when another app, e.g. VoicePlay, is the client)")
     parser.add_argument("--host", type=str, default='127.0.0.1', help="IP address of the network interface to listen for HTTP connections. Specify 0.0.0.0 to listen on all interfaces.")
     parser.add_argument("--allowed-origins", action='append', default=[], help="List of URLs to allow connection from, i.e. https://example.com. Allows http(s)://127.0.0.1:{port} and http(s)://localhost:{port} by default.")
 
@@ -127,7 +129,7 @@ def localServer(logLevel: str = "critical", key_path: str | None = None, cert_pa
             f"{os.path.basename(__file__)[:-3]}:app_socketio",
             host=HOST,
             port=int(PORT),
-            reload=False if hasattr(sys, "_MEIPASS") else True,
+            reload=bool(args.reload) and not hasattr(sys, "_MEIPASS"),
             ssl_keyfile=key_path,
             ssl_certfile=cert_path,
             log_level=logLevel,
@@ -248,6 +250,10 @@ if __name__ == "__main__":
             localServer(args.logLevel, key_path, cert_path)
         except Exception as e:
             logger.error(f"[Voice Changer] Web Server(https) Launch Exception, {e}")
+
+    elif args.no_client:
+        # Another app is the client: one process, no native client window.
+        localServer(args.logLevel)
 
     else:
         p = mp.Process(name="p", target=localServer, args=(args.logLevel,))

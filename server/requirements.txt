@@ -28,3 +28,4 @@ sounddevice==0.4.6
 dataclasses_json==0.5.7
 onnxsim==0.4.28
 torchfcpe==0.0.3
+pyworld==0.3.5

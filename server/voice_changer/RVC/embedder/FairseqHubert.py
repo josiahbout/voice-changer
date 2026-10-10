@@ -1,11 +1,13 @@
 import torch
 from torch import device
 from voice_changer.RVC.embedder.Embedder import Embedder
-from fairseq import checkpoint_utils
 
 
 class FairseqHubert(Embedder):
     def loadModel(self, file: str, dev: device, isHalf: bool = True) -> Embedder:
+        # Imported here so RVC models can use the ONNX embedder without fairseq installed.
+        from fairseq import checkpoint_utils
+
         super().setProps("hubert_base", file, dev, isHalf)
 
         models, saved_cfg, task = checkpoint_utils.load_model_ensemble_and_task(
