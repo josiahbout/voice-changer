@@ -89,6 +89,23 @@
       <input type="file" id="file-input" accept=".wav,.mp3,audio/wav,audio/mpeg" hidden>
     </section>
 
+    <!-- Voice sample, opened from the speaker button on a voice card (see "Voice previews" in app.js) -->
+    <div class="preview-pop" id="preview-pop" role="dialog" aria-label="Voice sample" data-playing="false" hidden>
+      <div class="preview-controls">
+        <button class="preview-play" id="preview-play" aria-label="Play">
+          <svg class="icon-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10.5-6.5z"/></svg>
+          <svg class="icon-pause" viewBox="0 0 24 24" aria-hidden="true"><rect x="6.5" y="5" width="4" height="14" rx="1.2"/><rect x="13.5" y="5" width="4" height="14" rx="1.2"/></svg>
+        </button>
+        <input type="range" id="preview-seek" min="0" max="1000" step="1" value="0" aria-label="Position in the sample">
+        <span class="preview-time" id="preview-time">0:00 / 0:00</span>
+        <!-- Plays the recording the sample was made from, to compare -->
+        <label class="preview-original" data-tip="Play the recording this sample was made from, before it was changed">
+          <input type="checkbox" id="preview-original"> Original audio
+        </label>
+      </div>
+    </div>
+    <audio id="preview-audio" preload="auto"></audio>
+
     <!-- Audio settings, opened from the sliders button in the mic bar -->
     <div class="popover popover-tune" id="tune-pop" role="dialog" aria-label="Audio settings" hidden>
       <!-- Copies of the Microphone settings (global, the same values as in Settings): each
@@ -236,25 +253,55 @@
 
       <!-- Opens the logs folder (electron/log.js) for bug reports -->
       <div class="settings-footer">
+        <button class="text-btn" id="run-setup" data-tip="Choose your voice range, microphone and virtual cable again">Run setup again</button>
         <button class="text-btn" id="open-logs" data-tip="Opens the folder with VoicePlay's log files. Send them with your bug report.">Report a problem…</button>
       </div>
     </div>
 
-    <!-- First run: sets the starting pitch from the user's natural voice -->
+    <!-- First-run setup (see "Onboarding" in app.js). Step 1 sets the starting pitch from the
+         user's natural voice; step 2 picks the microphone and makes sure the virtual cable is
+         there. Can be run again from Settings. -->
     <dialog class="onboarding" id="onboarding" aria-labelledby="onboarding-title">
-      <img class="onboarding-logo" src="assets/logo.svg" alt="">
-      <h2 id="onboarding-title">Welcome to VoicePlay</h2>
-      <p>What does your natural voice sound like? We'll set each voice's pitch to match. You can change it any time in voice adjustments.</p>
-      <div class="onboarding-choices">
-        <button class="choice" data-range="deeper" data-tip="Male voices keep your pitch (0). Female voices are raised (+14).">
-          <span class="choice-title">Deeper</span>
-          <span class="choice-sub">Masculine range</span>
-        </button>
-        <button class="choice" data-range="higher" data-tip="Female voices keep your pitch (0). Male voices are lowered by an octave (−12).">
-          <span class="choice-title">Higher</span>
-          <span class="choice-sub">Feminine range</span>
-        </button>
-      </div>
+      <section class="onboarding-step" id="onboarding-range">
+        <img class="onboarding-logo" src="assets/logo.svg" alt="">
+        <h2 id="onboarding-title">Welcome to VoicePlay</h2>
+        <p>What does your natural voice sound like? We'll set each voice's pitch to match. You can change it any time in voice adjustments.</p>
+        <div class="onboarding-choices">
+          <button class="choice" data-range="deeper" data-tip="Male voices mostly keep your pitch. Female voices are raised to suit you.">
+            <span class="choice-title">Deeper</span>
+            <span class="choice-sub">Masculine range</span>
+          </button>
+          <button class="choice" data-range="higher" data-tip="Female voices keep your pitch. Male voices are lowered to suit you.">
+            <span class="choice-title">Higher</span>
+            <span class="choice-sub">Feminine range</span>
+          </button>
+        </div>
+      </section>
+
+      <section class="onboarding-step onboarding-audio" id="onboarding-audio" aria-labelledby="setup-title" hidden>
+        <h2 id="setup-title">Set up your audio</h2>
+        <p>Pick the microphone you talk into, and make sure your games can hear your changed voice.</p>
+
+        <div class="setup-block">
+          <label class="field">
+            <span class="field-label">Your microphone</span>
+            <select id="setup-mic"></select>
+          </label>
+          <div class="level" aria-hidden="true"><div class="level-fill" id="setup-level"></div></div>
+          <p class="setup-note" id="setup-mic-note" hidden></p>
+        </div>
+
+        <div class="setup-block">
+          <span class="field-label">Getting your voice into games</span>
+          <div class="setup-cable" id="setup-cable" data-state="checking">
+            <p class="setup-cable-text" id="setup-cable-text">Looking for the virtual cable…</p>
+            <button class="setup-btn" id="setup-cable-install" hidden>Install VB-CABLE</button>
+          </div>
+          <p class="setup-credit">VB-CABLE by VB-Audio (<a href="https://vb-cable.com" target="_blank" rel="noopener">vb-cable.com</a>) is donationware.</p>
+        </div>
+
+        <button class="setup-btn setup-btn-primary" id="setup-done">Done</button>
+      </section>
     </dialog>
   </main>
 

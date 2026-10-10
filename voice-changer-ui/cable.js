@@ -29,4 +29,4 @@ async function routeToCable(audioContext) {
   return true;
 }
 
-window.VoicePlayCable = { findCable, routeToCable };
+window.VoicePlayCable = { findCable, routeToCable, isCable };

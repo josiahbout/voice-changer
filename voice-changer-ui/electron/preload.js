@@ -14,6 +14,10 @@ contextBridge.exposeInMainWorld("voiceplay", {
   log: (level, source, message, details) => ipcRenderer.send("log", level, source, message, details),
   openLogFolder: () => ipcRenderer.send("logs:open"),
 
+  // Opens VB-Audio's own VB-CABLE setup (see electron/vbcable.js). Resolves to
+  // { installed, cancelled, message }.
+  installVbCable: () => ipcRenderer.invoke("vbcable:install"),
+
   // Voice-changer server (see electron/server.js).
   server: {
     status: () => ipcRenderer.invoke("server:status"),

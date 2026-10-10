@@ -16,18 +16,21 @@ window.addEventListener("unhandledrejection", (e) =>
 // server's model slot that holds this voice's model; voices whose slot is empty show as
 // unavailable until a model is loaded there.
 // The comments name the model loaded in each slot (from the repo's voices/ folder).
-// `gender` picks the voice's group in the picker and its starting pitch (see RANGE_PITCH).
+// `gender` picks the voice's group in the picker and its starting pitch (see RANGE_PITCH);
+// `pitch` overrides that starting pitch for a first-run answer ("deeper" / "higher").
 const VOICES = [
-  { id: "sweetheart", name: "Mr. Sweetheart", image: "avatars/sweetheart.png", slot: 0, gender: "male" }, // voice_charles
-  { id: "bro", name: "Mr. Bro", image: "avatars/bro.png", slot: 1, gender: "male" }, // voice_ScaredySquirrel
-  { id: "gentleman", name: "Mr. Gentleman", image: "avatars/gentleman.png", slot: 2, gender: "male" }, // voice_RinnosukeGenso
-  { id: "rockstar", name: "Mr. Rockstar", image: "avatars/rockstar.png", slot: 3, gender: "male" }, // voice_WillWood
-  { id: "nerd", name: "Mr. Nerd", image: "avatars/nerd.png", slot: 4, gender: "male" }, // voice_PeterGriffin
-  { id: "veteran", name: "Mr. Veteran", image: "avatars/veteran.png", slot: 5, gender: "male" }, // voice_MorganFreeman
-  { id: "gamer", name: "Ms. Gamer", image: "avatars/gamer.png", slot: 6, gender: "female" }, // voice_Ms Gamer
-  { id: "quirky", name: "Ms. Quirky", image: "avatars/quirky.png", slot: 7, gender: "female" }, // server sample: Kikoto Kurage
-  { id: "shy", name: "Ms. Shy", image: "avatars/shy.png", slot: 8, gender: "female" }, // server sample: Tsukuyomi-chan
-  { id: "energetic", name: "Ms. Energetic", image: "avatars/energetic.png", slot: 9, gender: "female" }, // server sample: Amitaro
+  { id: "sweetheart", name: "Mr. Sweetheart", image: "avatars/sweetheart.png", slot: 0, gender: "male", pitch: { higher: -12 } }, // voice_charles
+  { id: "bro", name: "Mr. Bro", image: "avatars/bro.png", slot: 1, gender: "male", pitch: { higher: -15 } }, // voice_milesmorales
+  // Shown as "Mr. Business"; the id stays "gentleman" so saved choices and pitches carry over.
+  { id: "gentleman", name: "Mr. Business", image: "avatars/gentleman.png", slot: 2, gender: "male", pitch: { higher: -14 } }, // voice_RickSanchez
+  { id: "boy", name: "Mr. Boy", image: "avatars/boy.png", slot: 3, gender: "male", pitch: { deeper: 7, higher: -4 } }, // voice_CharlieSchnapp
+  { id: "nerd", name: "Mr. Nerd", image: "avatars/nerd.png", slot: 4, gender: "male", pitch: { higher: -9 } }, // voice_PeterGriffin
+  { id: "veteran", name: "Mr. Veteran", image: "avatars/veteran.png", slot: 5, gender: "male", pitch: { higher: -12 } }, // voice_MorganFreeman
+  { id: "gamer", name: "Ms. Gamer", image: "avatars/gamer.png", slot: 6, gender: "female", pitch: { deeper: 7 } }, // voice_Ms Gamer
+  { id: "gentle", name: "Ms. Gentle", image: "avatars/gentle.png", slot: 10, gender: "female" }, // voice_Danielaluke
+  { id: "quirky", name: "Ms. Quirky", image: "avatars/quirky.png", slot: 7, gender: "female", pitch: { deeper: 12 } }, // server sample: Kikoto Kurage
+  { id: "shy", name: "Ms. Shy", image: "avatars/shy.png", slot: 8, gender: "female", pitch: { deeper: 7 } }, // server sample: Tsukuyomi-chan
+  { id: "energetic", name: "Ms. Energetic", image: "avatars/energetic.png", slot: 9, gender: "female", pitch: { deeper: 13 } }, // server sample: Amitaro
 ];
 
 const VOICE_GROUPS = [
@@ -36,8 +39,9 @@ const VOICE_GROUPS = [
 ];
 
 // Each voice's starting pitch, from the first-run answer: voices that match the user's
-// range start at 0, the others are shifted. Once the user moves a voice's pitch slider,
-// that voice keeps their value instead (state.pitches).
+// range start at 0, the others are shifted, unless the voice sets its own (`pitch` in
+// VOICES). Once the user moves a voice's pitch slider, that voice keeps their value
+// instead (state.pitches).
 const RANGE_PITCH = {
   deeper: { male: 0, female: 14 },
   higher: { male: -12, female: 0 },
@@ -91,6 +95,7 @@ const state = {
   volume: 100, // percent
   pitches: {}, // { voiceId: semitones } for voices whose pitch the user has set; see voicePitch
   voiceRange: null, // "deeper" | "higher", asked on first run (see Onboarding)
+  audioSetupDone: false, // first-run step 2 (microphone and virtual cable) finished
   reduceNoise: false,
   sensitivity: 99, // percent; the server's noise gate, see sensitivityToThreshold
   inputGain: 100, // percent; mic (or file) level before conversion
@@ -114,7 +119,7 @@ const state = {
 // Settings the user picks are kept between runs (in the app's local storage).
 const PREF_KEYS = [
   "selected", "inputDevice", "outputDevice", "volume", "pitches", "reduceNoise", "sensitivity",
-  "inputGain", "indexRatio", "protect", "gpu", "chunk", "voiceRange",
+  "inputGain", "indexRatio", "protect", "gpu", "chunk", "voiceRange", "audioSetupDone",
   "extra", "crossfade", "highQuality", "trackPitch", "f0Detector", "effects",
 ];
 const PREFS_STORAGE = "voiceplay.prefs";
@@ -245,8 +250,12 @@ function showStatus(text, kind = "info") {
 
 const currentVoice = () => VOICES.find((v) => v.id === state.selected);
 
-// The pitch (the server's "tran", in semitones) to use for a voice.
-const voicePitch = (voice) => state.pitches[voice.id] ?? RANGE_PITCH[state.voiceRange ?? "deeper"][voice.gender];
+// The pitch (the server's "tran", in semitones) to use for a voice: the user's own value,
+// else the voice's starting pitch for their first-run answer, else the general one.
+function voicePitch(voice) {
+  const range = state.voiceRange ?? "deeper";
+  return state.pitches[voice.id] ?? voice.pitch?.[range] ?? RANGE_PITCH[range][voice.gender];
+}
 const hasModel = (voice) => !state.filledSlots || state.filledSlots.has(voice.slot);
 
 function showReadyStatus() {
@@ -273,6 +282,7 @@ function renderVoices() {
   const root = document.getElementById("voices");
   const card = (v) => `
     <div class="voice" role="radio" tabindex="0" data-id="${v.id}" aria-checked="${v.id === state.selected}"${hasModel(v) ? "" : ' data-empty="true" data-tip="No voice model loaded for this voice yet"'}>
+      ${hasModel(v) ? `<button class="preview-btn" data-preview="${v.id}" aria-label="Hear a sample of ${v.name}" aria-haspopup="dialog" aria-expanded="${previewFor === v.id}" data-tip="Hear a sample of this voice"><span class="preview-icon" aria-hidden="true"></span></button>` : ""}
       <div class="avatar"><img src="${v.image}" alt=""></div>
       <div class="voice-name">${v.name}</div>
     </div>`;
@@ -335,8 +345,123 @@ async function applyVoice() {
 }
 
 document.getElementById("voices").addEventListener("click", (e) => {
+  // The speaker button plays a sample; it doesn't select the voice.
+  const previewBtn = e.target.closest(".preview-btn");
+  if (previewBtn) return togglePreview(previewBtn.dataset.preview, previewBtn);
   const card = e.target.closest(".voice");
   if (card) selectVoice(card.dataset.id);
+});
+
+// ---------- Voice previews (speaker button on each card) ----------
+
+// Each voice has a short sample in previews/<voice id>.mp3: a test recording converted to
+// that voice (see previews/README.md). The speaker button opens a bubble above the mic bar
+// with a play/pause button and a timeline, and starts playing straight away. "Original
+// audio" switches to the recording the sample was made from (previews/original-<male or
+// female>.mp3: male voices are made from the female recording and the other way round).
+// The samples play on the system's default speakers; they never go through the voice changer.
+const previewPop = document.getElementById("preview-pop");
+const previewAudio = document.getElementById("preview-audio");
+const previewPlayBtn = document.getElementById("preview-play");
+const previewSeek = document.getElementById("preview-seek");
+const previewTime = document.getElementById("preview-time");
+const previewOriginal = document.getElementById("preview-original");
+let previewFor = null; // id of the voice whose sample is open
+
+function previewSrc(voice, original) {
+  if (!original) return `previews/${voice.id}.mp3`;
+  return `previews/original-${voice.gender === "male" ? "female" : "male"}.mp3`;
+}
+
+const formatTime = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+
+function showPreviewProgress() {
+  const { currentTime, duration } = previewAudio;
+  const known = Number.isFinite(duration) && duration > 0;
+  previewSeek.value = known ? Math.round((currentTime / duration) * 1000) : 0;
+  previewTime.textContent = `${formatTime(currentTime)} / ${known ? formatTime(duration) : "0:00"}`;
+}
+
+function showPreviewPlaying(playing) {
+  previewPop.dataset.playing = String(playing);
+  previewPlayBtn.setAttribute("aria-label", playing ? "Pause" : "Play");
+}
+
+// Loads a sample (or its original) at `startAt` seconds, and plays it unless `play` is false.
+function playPreviewSrc(voice, original, startAt = 0, play = true) {
+  const src = previewSrc(voice, original);
+  previewAudio.src = src;
+  if (startAt > 0) {
+    previewAudio.addEventListener("loadedmetadata", () => (previewAudio.currentTime = Math.min(startAt, previewAudio.duration)), { once: true });
+  }
+  showPreviewProgress();
+  if (!play) return;
+  previewAudio.play().catch((err) => {
+    if (err.name === "AbortError") return; // closed or switched before it started
+    showStatus(`Couldn't play the sample of ${voice.name}.`, "error");
+    logEvent("error", "preview", `couldn't play ${src}`, { error: err.message });
+    closePreview();
+  });
+}
+
+function openPreview(id, button) {
+  closePreview();
+  const voice = VOICES.find((v) => v.id === id);
+  previewFor = id;
+  button.setAttribute("aria-expanded", "true");
+  previewPop.setAttribute("aria-label", `Sample of ${voice.name}`);
+  previewOriginal.checked = false; // always starts on the changed voice
+  previewPop.hidden = false;
+  playPreviewSrc(voice, false);
+}
+
+// Switching between the sample and its original keeps the place, and keeps playing (or
+// stays paused).
+previewOriginal.addEventListener("change", () => {
+  const voice = VOICES.find((v) => v.id === previewFor);
+  if (!voice) return;
+  playPreviewSrc(voice, previewOriginal.checked, previewAudio.currentTime, !previewAudio.paused);
+});
+
+function closePreview() {
+  if (!previewFor) return;
+  previewAudio.pause();
+  previewAudio.removeAttribute("src");
+  previewAudio.load();
+  document.querySelector(`.preview-btn[data-preview="${previewFor}"]`)?.setAttribute("aria-expanded", "false");
+  previewFor = null;
+  previewPop.hidden = true;
+  showPreviewPlaying(false);
+}
+
+function togglePreview(id, button) {
+  if (previewFor === id) closePreview();
+  else openPreview(id, button);
+}
+
+previewPlayBtn.addEventListener("click", () => (previewAudio.paused ? previewAudio.play() : previewAudio.pause()));
+previewSeek.addEventListener("input", () => {
+  if (Number.isFinite(previewAudio.duration)) previewAudio.currentTime = (previewSeek.value / 1000) * previewAudio.duration;
+});
+previewAudio.addEventListener("play", () => showPreviewPlaying(true));
+previewAudio.addEventListener("pause", () => showPreviewPlaying(false));
+previewAudio.addEventListener("ended", () => {
+  previewAudio.currentTime = 0; // ready to play again from the start
+  showPreviewPlaying(false);
+});
+previewAudio.addEventListener("timeupdate", showPreviewProgress);
+previewAudio.addEventListener("loadedmetadata", showPreviewProgress);
+
+// Clicking elsewhere or pressing Escape closes it.
+document.addEventListener("click", (e) => {
+  if (previewFor && !previewPop.contains(e.target) && !e.target.closest(".preview-btn")) closePreview();
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && previewFor) {
+    const button = document.querySelector(`.preview-btn[data-preview="${previewFor}"]`);
+    closePreview();
+    button?.focus();
+  }
 });
 
 document.getElementById("voices").addEventListener("keydown", (e) => {
@@ -1056,23 +1181,207 @@ const startupProgress = (() => {
 
 // ---------- Onboarding ----------
 
-// First run only: ask whether the user's natural voice is deeper or higher. That sets
-// every voice's starting pitch (see RANGE_PITCH).
-function runOnboarding() {
-  if (state.voiceRange) return;
-  const dialog = document.getElementById("onboarding");
-  dialog.addEventListener("cancel", (e) => e.preventDefault()); // needs an answer
-  dialog.addEventListener("click", (e) => {
-    const choice = e.target.closest("[data-range]");
-    if (!choice) return;
-    state.voiceRange = choice.dataset.range;
-    savePrefs();
-    showVoicePitch();
-    sendPitch();
-    dialog.close();
-  });
-  dialog.showModal();
+// Step 1: ask whether the user's natural voice is deeper or higher. That sets every
+// voice's starting pitch (see RANGE_PITCH).
+// Step 2 ("Set up your audio"): pick the microphone, with a live level bar and a warning
+// for mics that look like another app's virtual device, and make sure the virtual cable
+// is there (installing VB-CABLE if not; see electron/vbcable.js). Runs once for everyone
+// (including people who answered step 1 before step 2 existed), and again from Settings.
+const onboarding = document.getElementById("onboarding");
+const setupMic = document.getElementById("setup-mic");
+const setupMicNote = document.getElementById("setup-mic-note");
+const setupLevel = document.getElementById("setup-level");
+const setupCable = document.getElementById("setup-cable");
+const setupCableText = document.getElementById("setup-cable-text");
+const setupCableInstall = document.getElementById("setup-cable-install");
+const setupDone = document.getElementById("setup-done");
+
+// Device names that suggest a virtual microphone from another app rather than a real one.
+// A best guess from the name only: Windows doesn't tell apps whether a device is hardware.
+const VIRTUAL_MIC_NAMES = ["virtual", "voicemod", "magicmic", "clownfish", "morphvox", "voice.ai", "voicemeeter", "vb-audio", "hi-fi cable"];
+// VoicePlay's own cable (its microphone side): as the input, it would feed VoicePlay its
+// own output.
+const isOwnCable = (label) => /cable output/i.test(label) || window.VoicePlayCable.isCable(label);
+
+function showOnboardingStep(step) {
+  document.getElementById("onboarding-range").hidden = step !== "range";
+  document.getElementById("onboarding-audio").hidden = step !== "audio";
+  if (step === "audio") startAudioSetup();
 }
+
+// Opens setup at the first step that hasn't been done (or at the start, from Settings).
+function runOnboarding(fromStart = false) {
+  const step = fromStart || !state.voiceRange ? "range" : !state.audioSetupDone ? "audio" : null;
+  if (!step) return;
+  showOnboardingStep(step);
+  if (!onboarding.open) onboarding.showModal();
+}
+
+onboarding.addEventListener("cancel", (e) => e.preventDefault()); // needs to be finished
+onboarding.addEventListener("click", (e) => {
+  const choice = e.target.closest("[data-range]");
+  if (!choice) return;
+  state.voiceRange = choice.dataset.range;
+  savePrefs();
+  showVoicePitch();
+  sendPitch();
+  showOnboardingStep("audio");
+});
+
+// ----- Microphone, with a level bar -----
+
+let levelRun = null; // { stream, ctx, frame, stopped } while the level bar is live
+let levelToken = 0; // the newest startLevel; older ones still opening the mic give up
+
+function stopLevel() {
+  levelToken++;
+  if (!levelRun) return;
+  levelRun.stopped = true;
+  cancelAnimationFrame(levelRun.frame);
+  levelRun.stream.getTracks().forEach((t) => t.stop());
+  levelRun.ctx.close();
+  levelRun = null;
+  setupLevel.style.width = "0%";
+}
+
+async function startLevel(deviceId) {
+  stopLevel();
+  const token = levelToken;
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: { deviceId: deviceId === "default" ? undefined : { exact: deviceId }, echoCancellation: false, autoGainControl: false, noiseSuppression: false },
+    });
+    // Another mic was picked (or setup closed) while this one was opening.
+    if (token !== levelToken) return stream.getTracks().forEach((t) => t.stop());
+    const ctx = new AudioContext();
+    const analyser = new AnalyserNode(ctx, { fftSize: 1024 });
+    ctx.createMediaStreamSource(stream).connect(analyser);
+    const data = new Float32Array(analyser.fftSize);
+    const run = { stream, ctx, frame: 0, stopped: false };
+    levelRun = run;
+    const draw = () => {
+      if (run.stopped) return;
+      analyser.getFloatTimeDomainData(data);
+      let sum = 0;
+      for (const v of data) sum += v * v;
+      // Square root again so quiet speech still moves the bar visibly.
+      setupLevel.style.width = `${Math.min(100, Math.sqrt(Math.sqrt(sum / data.length)) * 160)}%`;
+      run.frame = requestAnimationFrame(draw);
+    };
+    draw();
+  } catch (err) {
+    showMicNote("error", `Couldn't open this microphone: ${err.message}`);
+    logEvent("warn", "setup", "couldn't open microphone for the level bar", { error: err.message });
+  }
+}
+
+function showMicNote(kind, text) {
+  setupMicNote.hidden = !text;
+  setupMicNote.dataset.kind = kind;
+  setupMicNote.textContent = text;
+}
+
+function checkMicChoice() {
+  const label = setupMic.selectedOptions[0]?.textContent ?? "";
+  setupDone.disabled = false;
+  if (isOwnCable(label)) {
+    showMicNote("error", "That's VoicePlay's own virtual cable. Using it as your mic would feed VoicePlay back into itself. Pick your real microphone.");
+    setupDone.disabled = true;
+  } else if (VIRTUAL_MIC_NAMES.some((n) => label.toLowerCase().includes(n))) {
+    showMicNote("warn", "This looks like another app's virtual microphone. Your voice may already be changed or delayed before VoicePlay gets it. Pick your real microphone for the best results.");
+  } else {
+    showMicNote("ok", "");
+  }
+}
+
+async function listSetupMics() {
+  // Device names are only visible once the microphone is allowed.
+  const devices = (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === "audioinput" && d.deviceId && d.deviceId !== "communications");
+  if (!devices.some((d) => d.deviceId === state.inputDevice)) state.inputDevice = "default";
+  fillSelect(setupMic, devices.map((d, i) => ({ value: d.deviceId, label: d.label || `Microphone ${i + 1}` })), state.inputDevice);
+  checkMicChoice();
+}
+
+setupMic.addEventListener("change", () => {
+  checkMicChoice();
+  startLevel(setupMic.value);
+});
+
+// ----- Virtual cable -----
+
+function showCable(stateName, text) {
+  setupCable.dataset.state = stateName;
+  setupCableText.innerHTML = text;
+  setupCableInstall.hidden = !["missing", "failed"].includes(stateName) || !window.voiceplay;
+  setupCableInstall.disabled = false;
+  setupCableInstall.textContent = stateName === "failed" ? "Try again" : "Install VB-CABLE";
+}
+
+let cableInstalledThisSession = false;
+
+async function checkCable() {
+  const cable = await window.VoicePlayCable.findCable();
+  if (cable) {
+    state.outputDevice = cable.output.deviceId;
+    savePrefs();
+    audio.setOutputDevice(state.outputDevice).catch(() => {});
+    showCable("found", "VB-CABLE is ready, and VoicePlay will play your changed voice into it. <strong>In Discord or your game, choose “CABLE Output” as your microphone.</strong>");
+  } else if (cableInstalledThisSession) {
+    showCable("restart", "VB-CABLE is installed. <strong>Restart your PC</strong> to finish, then choose “CABLE Output” as your microphone in Discord or your game.");
+  } else {
+    showCable("missing", "Games can't hear VoicePlay directly: it needs <strong>VB-CABLE</strong>, a free virtual audio cable. Windows will ask for permission, then VB-Audio's setup opens: click <strong>Install Driver</strong>.");
+  }
+}
+
+setupCableInstall.addEventListener("click", async () => {
+  setupCableInstall.disabled = true;
+  showCable("installing", "Approve the Windows prompt, then click <strong>Install Driver</strong> in VB-Audio's setup window…");
+  const result = await window.voiceplay.installVbCable();
+  if (result.installed) {
+    cableInstalledThisSession = true;
+    return checkCable();
+  }
+  showCable("failed", result.cancelled
+    ? "The Windows prompt was declined, so VB-CABLE wasn't installed. Try again, or skip this for now: you can run setup again from Settings."
+    : `VB-CABLE wasn't installed (${result.message}) Try again, or install it yourself from vb-cable.com.`);
+});
+
+// ----- Step 2 open / done -----
+
+async function startAudioSetup() {
+  try {
+    const wanted = state.inputDevice;
+    await startLevel(wanted); // also asks for the microphone, so device names show
+    await listSetupMics();
+    if (setupMic.value !== wanted) startLevel(setupMic.value); // the saved mic was unplugged
+  } catch (err) {
+    logEvent("warn", "setup", "couldn't list microphones", { error: err.message });
+  }
+  checkCable();
+}
+
+// Plugging in a mic or finishing a cable install changes the device list.
+navigator.mediaDevices?.addEventListener("devicechange", () => {
+  if (!onboarding.open || document.getElementById("onboarding-audio").hidden) return;
+  listSetupMics();
+  checkCable();
+});
+
+setupDone.addEventListener("click", () => {
+  state.inputDevice = setupMic.value || "default";
+  state.audioSetupDone = true;
+  savePrefs();
+  stopLevel();
+  onboarding.close();
+  refreshDevices();
+  restartTalking(); // picks up the new microphone if already talking
+  logEvent("info", "setup", "audio setup done", { cable: setupCable.dataset.state, micWarning: setupMicNote.dataset.kind });
+});
+
+document.getElementById("run-setup").addEventListener("click", () => {
+  POPOVERS.forEach((entry) => setPopover(entry, false));
+  runOnboarding(true);
+});
 
 // ---------- Desktop window ----------
 

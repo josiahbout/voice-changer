@@ -23,6 +23,7 @@
       "cable.js",
       "audio.js",
       "avatars/**",
+      "previews/*.mp3",
       "assets/**",
       "electron/**"
     ],

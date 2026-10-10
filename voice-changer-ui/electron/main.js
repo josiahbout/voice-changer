@@ -5,6 +5,7 @@ const { app, BrowserWindow, ipcMain, Menu, nativeImage, screen, session, shell, 
 const path = require("path");
 const log = require("./log");
 const server = require("./server");
+const vbcable = require("./vbcable");
 
 // Anything that slips through everywhere else still ends up in the log.
 process.on("uncaughtException", (err) => log.error("main", "uncaught exception", err));
@@ -60,6 +61,11 @@ function createWindow() {
   });
 
   win.loadFile(path.join(__dirname, "..", "index.html"));
+  // Web links (e.g. vb-cable.com in setup) open in the user's browser, never in an app window.
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    if (/^https?:\/\//.test(url)) shell.openExternal(url);
+    return { action: "deny" };
+  });
   // Safety net: never keep dragging once the window loses focus.
   win.on("blur", endDrag);
 
@@ -181,6 +187,9 @@ ipcMain.on("log", (_e, level, source, message, details) => {
   if (LOG_LEVELS.has(level)) log.write(level, `page:${String(source).slice(0, 40)}`, String(message).slice(0, 2000), details);
 });
 ipcMain.on("logs:open", openLogFolder);
+
+// VB-CABLE install from first-run setup (see vbcable.js).
+ipcMain.handle("vbcable:install", () => vbcable.install());
 
 ipcMain.handle("server:status", () => server.getStatus());
 ipcMain.handle("server:info", () => server.info());
