@@ -56,23 +56,26 @@ class MMVC_Rest:
                 port=port
             )
 
-            app_fastapi.mount(
-                "/front",
-                StaticFiles(directory=f"{getFrontendPath()}", html=True),
-                name="static",
-            )
+            # The web client isn't shipped with VoicePlay, which is its own client.
+            if os.path.isdir(getFrontendPath()):
+                app_fastapi.mount(
+                    "/front",
+                    StaticFiles(directory=f"{getFrontendPath()}", html=True),
+                    name="static",
+                )
 
-            app_fastapi.mount(
-                "/trainer",
-                StaticFiles(directory=f"{getFrontendPath()}", html=True),
-                name="static",
-            )
+                app_fastapi.mount(
+                    "/trainer",
+                    StaticFiles(directory=f"{getFrontendPath()}", html=True),
+                    name="static",
+                )
 
-            app_fastapi.mount(
-                "/recorder",
-                StaticFiles(directory=f"{getFrontendPath()}", html=True),
-                name="static",
-            )
+                app_fastapi.mount(
+                    "/recorder",
+                    StaticFiles(directory=f"{getFrontendPath()}", html=True),
+                    name="static",
+                )
+
             app_fastapi.mount("/tmp", StaticFiles(directory=f"{TMP_DIR}"), name="static")
             app_fastapi.mount("/upload_dir", StaticFiles(directory=f"{UPLOAD_DIR}"), name="static")
             try:
@@ -92,8 +95,9 @@ class MMVC_Rest:
                     name="static",
                 )
             else:
+                # Served at a fixed path: model_dir may be an absolute path (VoicePlay passes one).
                 app_fastapi.mount(
-                    f"/{voiceChangerParams.model_dir}",
+                    "/model_dir",
                     StaticFiles(directory=voiceChangerParams.model_dir),
                     name="static",
                 )

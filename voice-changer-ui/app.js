@@ -1106,6 +1106,7 @@ function onServerStatus(status) {
     startupProgress.fail();
   }
   if (status === "missing") showStatus("Voice server not found. Set up server\\.venv, or start the server yourself.", "error");
+  if (status === "blocked") showStatus("The voice server can't start on this PC. See the message for how to fix it, then start VoicePlay again.", "error");
   if (status === "stopped") showStatus("The voice server stopped.", "error");
 }
 

@@ -7,7 +7,8 @@
   "main": "electron/main.js",
   "scripts": {
     "start": "electron .",
-    "dist": "electron-builder --win"
+    "dist": "electron-builder --win dir",
+    "package": "powershell -NoProfile -ExecutionPolicy Bypass -File build/package.ps1"
   },
   "devDependencies": {
     "electron": "44.4.5",
@@ -42,7 +43,7 @@
       }
     ],
     "win": {
-      "target": "nsis",
+      "target": "dir",
       "icon": "assets/icon.png"
     },
     "nsis": {
@@ -50,6 +51,9 @@
       "perMachine": true,
       "allowElevation": true,
       "include": "build/installer.nsh"
+    },
+    "directories": {
+      "output": "dist"
     }
   },
   "allowScripts": {

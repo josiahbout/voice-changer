@@ -47,16 +47,26 @@ converted audio to the output device, which defaults to the virtual cable when i
 Each voice card uses one of the server's model slots (`slot` in `VOICES`, `app.js`).
 Cards whose slot has no model are greyed out until a model is loaded there.
 
-## Build the installer
+## Build the alpha package
 
 ```bash
-npm run dist
+npm run package
 ```
 
-This makes `dist/VoicePlay Setup <version>.exe`. The installer also sets up VB-CABLE (the
-virtual audio cable) unless the user already has it, so it needs
-`virtual-cable/vendor/VBCABLE_Driver_Pack45.zip` from [vb-cable.com](https://vb-cable.com).
-That zip is committed unmodified, as its licence allows. See [virtual-cable/README.md](virtual-cable/README.md).
+This makes a ready-to-run folder, `dist/VoicePlay/` (start `VoicePlay.exe`), and zips it to
+`dist/VoicePlay-<version>-alpha.zip` for sharing (several GB, so use Google Drive or OneDrive).
+There's no installer: at about 10 GB the app is too big for one. Testers unzip it anywhere
+and run `VoicePlay.exe`. `npm run package -- -NoZip` skips the zip.
+
+The folder holds the app plus everything the voice server needs, so testers install nothing
+else: the server code, base models and voices (`resources/server`) and Python with PyTorch
+(`resources/python`, copied from `server/.venv`). The server writes its own small files to
+`%LOCALAPPDATA%\VoicePlay\server`. VB-CABLE isn't installed by the package: first-run setup
+offers to install it from `resources/vbcable`. See [build/package.ps1](build/package.ps1).
+
+On start, VoicePlay checks for an NVIDIA card with driver 570 or newer, that Smart App Control
+is off (it blocks the unsigned PyTorch files) and that port 18888 is free, and explains how to
+fix any of these (see `electron/checks.js`).
 
 ## Layout
 
@@ -66,8 +76,8 @@ audio.js                         mic -> voice server -> output device
 cable.js                         finds the virtual cable and routes audio into it
 avatars/                         voice portraits
 electron/                        desktop window and tray (main.js), its bridge to the page
-                                 (preload.js), the voice server connection (server.js) and the
-                                 error log (log.js)
-build/installer.nsh              extra installer steps (VB-CABLE install / uninstall)
+                                 (preload.js), the voice server connection (server.js), start-up
+                                 checks (checks.js), VB-CABLE setup (vbcable.js) and the error log (log.js)
+build/package.ps1                builds the portable alpha folder and zip
 virtual-cable/                   virtual audio cable: VB-CABLE scripts now, our own driver later
 ```

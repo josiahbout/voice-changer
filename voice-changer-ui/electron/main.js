@@ -1,7 +1,7 @@
 // Electron main process: opens the VoicePlay window, handles the custom title bar buttons,
 // keeps VoicePlay in the system tray, runs the voice-changer server connection (see
 // server.js) and keeps the error log (see log.js).
-const { app, BrowserWindow, ipcMain, Menu, nativeImage, screen, session, shell, Tray } = require("electron");
+const { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, screen, session, shell, Tray } = require("electron");
 const path = require("path");
 const log = require("./log");
 const server = require("./server");
@@ -78,6 +78,13 @@ function createWindow() {
   win.webContents.on("responsive", () => log.info("window", "page is responding again"));
 }
 
+// Explains why the voice server can't start (see checks.js), one message per problem.
+async function showProblems(problems) {
+  for (const problem of problems) {
+    await dialog.showMessageBox(win, { type: "warning", title: "VoicePlay", message: problem.title, detail: problem.detail });
+  }
+}
+
 function openLogFolder() {
   const dir = log.dir();
   if (dir) shell.openPath(dir);
@@ -108,9 +115,13 @@ if (!app.requestSingleInstanceLock()) {
     session.defaultSession.setPermissionCheckHandler((_contents, permission) => allowed.has(permission));
     createWindow();
     createTray();
-    server.start(path.join(app.getPath("logs"), "server.log"), (status) => {
-      if (win && !win.isDestroyed()) win.webContents.send("server:status", status);
-    });
+    server.start(
+      path.join(app.getPath("logs"), "server.log"),
+      (status) => {
+        if (win && !win.isDestroyed()) win.webContents.send("server:status", status);
+      },
+      showProblems,
+    );
   });
 
   app.on("before-quit", () => {

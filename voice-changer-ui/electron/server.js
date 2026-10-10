@@ -6,12 +6,44 @@ const { spawn, execFileSync } = require("child_process");
 const fs = require("fs");
 const http = require("http");
 const path = require("path");
+const checks = require("./checks");
 const log = require("./log");
 
 const HOST = "127.0.0.1";
 const PORT = 18888;
-const SERVER_DIR = path.resolve(__dirname, "..", "..", "server");
-const PYTHON = path.join(SERVER_DIR, ".venv", "Scripts", "python.exe");
+
+// Where the server's code, Python and data live.
+// - Development: ../server with its .venv, and the server writes into ../server.
+// - Packaged (the portable VoicePlay folder, see build/package.ps1): the code, base models
+//   and voices are in resources/server, Python in resources/python. The server runs in
+//   %LOCALAPPDATA%\VoicePlay\server, so the small files it writes (its own settings, temp
+//   files) stay out of the app folder; voices are read from resources/server/model_dir.
+const PACKAGED = require("electron").app.isPackaged;
+const SERVER_DIR = PACKAGED ? path.join(process.resourcesPath, "server") : path.resolve(__dirname, "..", "..", "server");
+const PYTHON = PACKAGED ? path.join(process.resourcesPath, "python", "python.exe") : path.join(SERVER_DIR, ".venv", "Scripts", "python.exe");
+const WORK_DIR = PACKAGED ? path.join(process.env.LOCALAPPDATA || require("os").tmpdir(), "VoicePlay", "server") : SERVER_DIR;
+
+// Command-line arguments. --no_client: one process, and no attempt to open the server's own client window.
+function serverArgs() {
+  const args = [path.join(SERVER_DIR, "MMVCServerSIO.py"), "-p", String(PORT), "--https", "false", "--no_client", "true"];
+  if (!PACKAGED) return args;
+  // The server's default paths are relative to where it runs; point them at the app folder.
+  const pretrain = (file) => path.join(SERVER_DIR, "pretrain", file);
+  return args.concat([
+    "--model_dir", path.join(SERVER_DIR, "model_dir"),
+    "--content_vec_500", pretrain("checkpoint_best_legacy_500.pt"),
+    "--content_vec_500_onnx", pretrain("content_vec_500.onnx"),
+    "--hubert_base", pretrain("hubert_base.pt"),
+    "--hubert_base_jp", pretrain("rinna_hubert_base_jp.pt"),
+    "--hubert_soft", pretrain(path.join("hubert", "hubert-soft-0d54a1f4.pt")),
+    "--whisper_tiny", pretrain("whisper_tiny.pt"),
+    "--nsf_hifigan", pretrain(path.join("nsf_hifigan", "model")),
+    "--crepe_onnx_full", pretrain("crepe_onnx_full.onnx"),
+    "--crepe_onnx_tiny", pretrain("crepe_onnx_tiny.onnx"),
+    "--rmvpe", pretrain("rmvpe.pt"),
+    "--rmvpe_onnx", pretrain("rmvpe.onnx"),
+  ]);
+}
 // The first start downloads ~1 GB of base models, so allow plenty of time.
 const START_TIMEOUT_MS = 15 * 60 * 1000;
 // If the server crashes, start it again, but give up after this many crashes in RESTART_WINDOW_MS.
@@ -19,13 +51,15 @@ const MAX_RESTARTS = 3;
 const RESTART_WINDOW_MS = 10 * 60 * 1000;
 const MAX_SERVER_LOG_BYTES = 10 * 1024 * 1024;
 
-// "starting" | "ready" | "missing" (no server or Python env found) | "stopped"
+// "starting" | "ready" | "missing" (no server or Python env found)
+// | "blocked" (a start-up check failed, see checks.js) | "stopped"
 let status = "stopped";
 let child = null; // only set when we started the server ourselves
 let stopping = false; // we're stopping it on purpose, so an exit isn't a crash
 let crashes = []; // times of recent crashes
 let serverLogFile = null;
 let onStatus = () => {};
+let onProblems = () => {};
 
 function setStatus(next) {
   if (next !== status) log.info("server", `status: ${next}`);
@@ -99,9 +133,9 @@ function spawnServer() {
   rotateServerLog();
   const out = fs.openSync(serverLogFile, "a");
   stopping = false;
-  // --no_client: one process, and no attempt to open the server's own client window.
-  child = spawn(PYTHON, ["MMVCServerSIO.py", "-p", String(PORT), "--https", "false", "--no_client", "true"], {
-    cwd: SERVER_DIR,
+  fs.mkdirSync(WORK_DIR, { recursive: true });
+  child = spawn(PYTHON, serverArgs(), {
+    cwd: WORK_DIR,
     env: {
       ...process.env,
       // PyTorch 2.6+ refuses older model checkpoints unless this is set.
@@ -109,6 +143,8 @@ function spawnServer() {
       PYTHONIOENCODING: "utf-8",
       // Write print() output to the log straight away; otherwise it's buffered and lost on exit.
       PYTHONUNBUFFERED: "1",
+      // The bundled Python must only use its own packages, never ones installed for the user.
+      ...(PACKAGED ? { PYTHONNOUSERSITE: "1", PYTHONHOME: "", PYTHONPATH: "" } : {}),
     },
     stdio: ["ignore", out, out],
     windowsHide: true,
@@ -138,6 +174,12 @@ async function waitForServer() {
     log.error("server", `Python environment not found at ${PYTHON}`);
     return setStatus("missing");
   }
+  const problems = await checks.runAll({ port: PORT, serverAnswers: false });
+  if (problems.length) {
+    log.error("server", "start-up checks failed", { problems });
+    setStatus("blocked");
+    return onProblems(problems);
+  }
   spawnServer();
   const deadline = Date.now() + START_TIMEOUT_MS;
   while (child && Date.now() < deadline) {
@@ -151,9 +193,11 @@ async function waitForServer() {
 }
 
 // Uses a server that's already running (e.g. from start-server.bat), otherwise starts one.
-function start(logFile, statusListener) {
+// problemsListener gets the failed start-up checks, if any (see checks.js).
+function start(logFile, statusListener, problemsListener) {
   serverLogFile = logFile;
   onStatus = statusListener;
+  onProblems = problemsListener;
   return waitForServer();
 }
 
