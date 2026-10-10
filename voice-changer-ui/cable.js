@@ -1,6 +1,6 @@
 // Virtual cable: finds the VoicePlay cable's speaker and sends converted audio into it,
 // so games can record it from the "VoicePlay Mic". See virtual-cable/README.md.
-// SCAFFOLD: nothing calls this yet.
+// app.js uses findCable to pick the cable as the default output once the mic is on.
 
 // Matched against device labels: our own driver (upstream AudioMirror names until it is
 // rebranded) and VB-CABLE, which ships with the app for now. VB-CABLE shows up as

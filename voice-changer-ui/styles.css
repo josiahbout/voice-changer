@@ -50,10 +50,15 @@ body {
   height: min(780px, calc(100vh - 48px));
 }
 
-/* Header */
-.app-header { display: flex; justify-content: space-between; align-items: center; }
+/* Header: a slightly darker bar across the top of the card */
+.app-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin: -22px -28px 14px; padding: 12px 28px;
+  background: rgba(80, 50, 140, 0.06);
+  border-bottom: 1px solid var(--tile-border);
+}
 .brand { display: flex; align-items: center; gap: 10px; }
-.brand-icon { width: 34px; height: 34px; fill: var(--accent-deep); }
+.brand-icon { width: 40px; height: 30px; object-fit: contain; }
 .brand-name { font-weight: 800; font-size: 20px; line-height: 1.1; }
 
 .icon-btn {
@@ -82,6 +87,79 @@ body {
 /* Intro */
 .intro { text-align: center; margin: 4px 0 20px; }
 .intro h1 { margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -0.01em; }
+/* Subtitle: "Your estimated delay: 0.35s" */
+.delay-row { display: inline-flex; align-items: center; gap: 6px; margin-top: 4px; }
+.delay-row[hidden] { display: none; }
+.delay { font-size: 14px; font-weight: 600; color: var(--ink-soft); }
+/* Small round "i" that opens the About delay pop-up */
+.info-btn {
+  width: 18px; height: 18px; padding: 0; border-radius: 50%; cursor: pointer;
+  border: 1.5px solid var(--ink-soft); background: transparent; color: var(--ink-soft);
+  display: grid; place-items: center;
+  transition: background .2s, color .2s, border-color .2s;
+}
+/* A drawn "i" (dot + stem) rather than a letter, so it sits exactly in the middle */
+.info-btn svg { width: 12px; height: 12px; display: block; }
+.info-btn circle { fill: currentColor; }
+.info-btn path { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
+.info-btn:hover, .info-btn[aria-expanded="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+.info-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Voice server status, under the title */
+.status { margin: 6px 0 0; min-height: 1.4em; font-size: 13px; font-weight: 600; color: var(--ink-soft); }
+.status[data-kind="ok"] { color: var(--on-ink); }
+.status[data-kind="warn"] { color: #a1660b; }
+.status[data-kind="error"] { color: #c0303f; }
+
+/* Until the voice server is ready, the voices and mic bar are grayed out and can't be used.
+   The filter goes on the mic bar's buttons, not the bar, so its frosted glass still works. */
+.voices, .talk-bar > * { transition: filter .3s, opacity .3s; }
+.app[data-ready="false"] .voices,
+.app[data-ready="false"] .talk-bar > * { filter: grayscale(1); opacity: 0.45; }
+.app[data-ready="false"] .voices,
+.app[data-ready="false"] .talk-bar { pointer-events: none; }
+
+/* Hover descriptions (see Tooltips in app.js) */
+.tooltip {
+  position: fixed; z-index: 50; max-width: 240px; pointer-events: none;
+  padding: 6px 10px; border-radius: 8px;
+  background: var(--ink); color: #fff;
+  font-size: 12.5px; font-weight: 600; line-height: 1.35; text-align: center;
+  box-shadow: 0 6px 16px -6px rgba(44, 37, 64, 0.45);
+}
+
+/* Startup progress bar, under the title while the voice server starts */
+.startup { width: min(320px, 80%); margin: 10px auto 0; }
+.startup-track { height: 8px; border-radius: 999px; background: var(--accent-soft); overflow: hidden; }
+.startup-fill {
+  width: 0; height: 100%; border-radius: inherit;
+  background: linear-gradient(90deg, var(--accent), var(--accent-deep));
+  transition: width .25s linear;
+}
+.startup-label { margin-top: 6px; font-size: 13px; font-weight: 600; color: var(--ink-soft); }
+.startup[data-state="done"] { opacity: 0; transition: opacity .4s .2s; }
+
+/* First-run onboarding */
+.onboarding {
+  width: min(480px, calc(100vw - 32px)); padding: 28px 26px 24px; text-align: center;
+  border: 1px solid var(--card-border); border-radius: 22px; color: var(--ink);
+  background: #fff; box-shadow: var(--shadow);
+}
+.onboarding::backdrop { background: rgba(44, 37, 64, 0.35); backdrop-filter: blur(3px); }
+.onboarding-logo { width: 56px; height: 42px; object-fit: contain; }
+.onboarding h2 { margin: 10px 0 6px; font-size: 22px; font-weight: 800; }
+.onboarding p { margin: 0 0 18px; font-size: 14px; line-height: 1.45; color: var(--ink-soft); }
+.onboarding-choices { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.choice {
+  display: grid; gap: 2px; padding: 16px 10px; cursor: pointer; font: inherit; color: inherit;
+  border: 1.5px solid var(--tile-border); border-radius: 16px; background: var(--tile);
+  transition: border-color .15s, background .15s, transform .15s;
+}
+.choice:hover { border-color: var(--accent); background: var(--accent-soft); }
+.choice:active { transform: scale(0.98); }
+.choice:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.choice-title { font-size: 17px; font-weight: 800; }
+.choice-sub { font-size: 13px; font-weight: 600; color: var(--ink-soft); }
 
 /* Voice cards */
 .voices {
@@ -92,6 +170,14 @@ body {
   margin: 0 -8px; padding: 8px 8px 120px;
   scrollbar-width: thin; scrollbar-color: #d6cbe9 transparent;
 }
+
+/* "Male voices" / "Female voices" headings, spanning the whole grid row */
+.voice-group {
+  grid-column: 1 / -1; margin: 10px 0 -4px;
+  font-size: 13px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--ink-soft);
+}
+.voice-group:first-child { margin-top: 0; }
 
 .voice {
   position: relative;
@@ -110,6 +196,10 @@ body {
   border-color: var(--accent);
   box-shadow: 0 0 0 4px var(--accent-soft), 0 12px 24px -12px var(--accent-glow);
 }
+
+/* No model loaded in this voice's server slot yet */
+.voice[data-empty="true"] { opacity: 0.45; cursor: not-allowed; }
+.voice[data-empty="true"]:hover { transform: none; border-color: var(--tile-border); }
 
 .avatar {
   width: 112px; height: 112px; margin: 0 auto 12px;
@@ -148,6 +238,11 @@ body {
 #listen-btn[aria-pressed="true"]:hover { background: var(--accent-deep); }
 #listen-btn[aria-pressed="true"] path { stroke: #fff; }
 #listen-btn[aria-pressed="true"] .slash { display: none; }
+/* Music note: purple while a file is playing */
+#file-btn[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); }
+#file-btn[aria-pressed="true"]:hover { background: var(--accent-deep); }
+#file-btn[aria-pressed="true"] path { stroke: #fff; }
+#file-btn[aria-pressed="true"] circle { fill: #fff; }
 .bar-btn[aria-expanded="true"], .icon-btn[aria-expanded="true"] { background: var(--accent-soft); }
 .bar-btn:focus-visible, .icon-btn:focus-visible, .win-btn:focus-visible, .mic:focus-visible {
   outline: 2px solid var(--accent); outline-offset: 2px;
@@ -165,8 +260,81 @@ body {
   box-shadow: 0 18px 40px -16px rgba(80, 50, 140, 0.4), 0 2px 8px -2px rgba(80, 50, 140, 0.12);
 }
 .popover[hidden] { display: none; }
-.popover-tune { left: 50%; bottom: 96px; transform: translateX(-50%); }
-.popover-settings { top: 64px; right: 28px; }
+/* Scrolls once Effects is opened and it no longer fits above the mic bar */
+.popover-tune {
+  left: 50%; bottom: 96px; transform: translateX(-50%);
+  max-height: calc(100% - 172px); overflow-y: auto;
+  scrollbar-width: thin; scrollbar-color: #d6cbe9 transparent;
+}
+/* Scrolls if there are more settings than fit under the header */
+/* About delay: under the estimated delay line */
+.popover-delay { top: 150px; left: 50%; transform: translateX(-50%); width: 320px; }
+.popover-title { margin: 0; font-size: 15px; font-weight: 800; color: var(--ink); }
+.popover-text { margin: 0; font-size: 13px; line-height: 1.45; color: var(--ink-soft); }
+.popover-text strong { color: var(--ink); }
+/* Five dots under the speed slider, one per stop; the selected one is filled */
+.speed-dots { display: flex; justify-content: space-between; padding: 0 5px; margin-top: -2px; }
+.speed-dots span { width: 6px; height: 6px; border-radius: 50%; background: #d9d3e4; }
+.speed-dots span[data-active="true"] { background: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.speed-ends { display: flex; justify-content: space-between; font-size: 12px; font-weight: 700; color: var(--ink-soft); }
+/* Settings changed by hand: the slider turns yellow and a notice explains why */
+.speed-field input[type="range"] { accent-color: var(--accent); }
+.speed-field[data-custom="true"] input[type="range"] { accent-color: #eab308; }
+.speed-field[data-custom="true"] output { color: #a1660b; }
+.speed-custom-note {
+  margin: 0; padding: 8px 10px; border-radius: 10px;
+  font-size: 13px; font-weight: 600; line-height: 1.4;
+  color: #7a5208; background: #fef7e0; border: 1px solid #f5d77a;
+}
+.speed-custom-note[hidden] { display: none; }
+
+.popover-settings {
+  top: 64px; right: 28px;
+  max-height: calc(100% - 80px); overflow-y: auto;
+  scrollbar-width: thin; scrollbar-color: #d6cbe9 transparent;
+}
+
+/* Collapsible sections (Effects in voice adjustments, Performance in settings): a header
+   row with an arrow that flips when open */
+.effects, .collapsible { border-top: 1px solid var(--tile-border); padding-top: 12px; }
+.effects summary, .collapsible summary {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 13px; font-weight: 700; color: var(--ink);
+  cursor: pointer; list-style: none;
+}
+.effects summary::-webkit-details-marker, .collapsible summary::-webkit-details-marker { display: none; }
+.effects summary::after, .collapsible summary::after {
+  content: ""; width: 7px; height: 7px; margin-right: 4px;
+  border-right: 2px solid var(--ink-soft); border-bottom: 2px solid var(--ink-soft);
+  transform: rotate(45deg); transition: transform .2s;
+}
+.effects[open] summary::after, .collapsible[open] summary::after { transform: rotate(-135deg); }
+.effects summary:focus-visible, .collapsible summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+
+/* Settings groups: a small heading over each group, a line between groups */
+.settings-group { display: grid; gap: 14px; }
+.settings-group + .settings-group { border-top: 1px solid var(--tile-border); padding-top: 12px; }
+.settings-heading {
+  margin: 0; font-size: 12px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--ink-soft);
+}
+.settings-badge {
+  margin-left: 6px; padding: 1px 6px; border-radius: 999px;
+  font-size: 10px; letter-spacing: 0.04em; color: var(--accent-deep); background: var(--accent-soft);
+}
+.settings-advanced > .settings-group { margin-top: 12px; }
+.settings-footer { border-top: 1px solid var(--tile-border); padding-top: 10px; }
+.text-btn {
+  padding: 0; border: 0; background: none; cursor: pointer;
+  font: inherit; font-size: 13px; font-weight: 700; color: var(--accent-deep);
+}
+.text-btn:hover { text-decoration: underline; }
+.text-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+.text-btn[hidden] { display: none; }
+.settings-hint { margin: 0; font-size: 12px; line-height: 1.4; color: var(--ink-soft); }
+.effects-list { display: grid; gap: 12px; margin-top: 12px; }
+.effect-params { display: grid; gap: 10px; margin-top: 10px; padding-left: 10px; border-left: 2px solid var(--accent-soft); }
+.effect-params[hidden] { display: none; }
 
 .field { display: grid; gap: 6px; }
 .field-row { grid-template-columns: 1fr auto; align-items: center; }
@@ -175,6 +343,7 @@ body {
   font-size: 13px; font-weight: 700; color: var(--ink);
 }
 .field-label output { font-weight: 700; color: var(--accent-deep); }
+.pitch-voice { font-weight: 600; color: var(--ink-soft); }
 
 .field select {
   width: 100%; font: inherit; font-size: 13px; color: var(--ink);
@@ -222,24 +391,40 @@ body {
   50%      { box-shadow: 0 0 0 10px rgba(167,139,250,.26), 0 8px 24px -4px var(--accent-glow); }
 }
 
+/* Loading ring: an arc that sweeps around the mic while a voice model loads */
+.mic-wrap { position: relative; flex: none; display: grid; place-items: center; }
+.mic-ring {
+  position: absolute; inset: -8px; border-radius: 50%; pointer-events: none;
+  background: conic-gradient(from 0deg, transparent 0 8%, var(--accent) 70%, var(--accent-deep) 100%);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3.5px));
+          mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3.5px));
+  opacity: 0; transition: opacity .25s;
+}
+.mic-wrap[data-loading="true"] .mic-ring { opacity: 1; animation: mic-spin 0.9s linear infinite; }
+@keyframes mic-spin { to { transform: rotate(1turn); } }
+@media (prefers-reduced-motion: reduce) {
+  .mic-wrap[data-loading="true"] .mic-ring { animation-duration: 2.4s; }
+}
+
 /* Desktop app: the card fills the window, and the header doubles as the title bar */
 .desktop body { padding: 0; place-items: stretch; }
 .desktop .app {
   max-width: none; height: 100vh;
   border: 0; border-radius: 0; box-shadow: none;
 }
+/* Dragging is done in app.js; the hand cursor shows where you can grab the window */
 .drag-strip { display: none; }
 .desktop .drag-strip {
   display: block; position: absolute; top: 0; left: 0; right: 0; height: 64px;
-  -webkit-app-region: drag;
+  cursor: pointer;
 }
 /* The header sits above the strip so its buttons still get clicks */
-.desktop .app-header { position: relative; z-index: 1; -webkit-app-region: drag; }
-.desktop .app-header button, .desktop .popover { -webkit-app-region: no-drag; }
+.desktop .app-header { position: relative; z-index: 1; cursor: pointer; user-select: none; }
 
 /* Small screens */
 @media (max-width: 640px) {
   .app { padding: 18px 16px 0; border-radius: 22px; }
+  .app-header { margin: -18px -16px 12px; padding: 10px 16px; }
   .voices { grid-template-columns: 1fr; gap: 10px; padding-bottom: 104px; }
   .voice { display: flex; align-items: center; gap: 14px; padding: 10px 12px; }
   .voice-name { text-align: left; }

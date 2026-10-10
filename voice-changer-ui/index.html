@@ -7,21 +7,20 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/svg+xml" href="assets/logo.svg">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <main class="app">
+  <main class="app" data-ready="false">
     <!-- Invisible strip across the top; drags the window in the desktop app -->
     <div class="drag-strip" aria-hidden="true"></div>
     <header class="app-header">
       <div class="brand">
-        <svg class="brand-icon" viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M7 6h10a5 5 0 0 1 4.9 6l-.8 4a3 3 0 0 1-5.2 1.4L14 15.5h-4l-1.9 1.9A3 3 0 0 1 2.9 16l-.8-4A5 5 0 0 1 7 6Zm0 3.2v1.3H5.7v1.6H7v1.3h1.6v-1.3h1.3v-1.6H8.6V9.2H7Zm9.5.1a1 1 0 1 0 0 2 1 1 0 0 0 0-2Zm-1.8 2.2a1 1 0 1 0 0 2 1 1 0 0 0 0-2Z"/>
-        </svg>
+        <img class="brand-icon" src="assets/logo.svg" alt="">
         <div class="brand-name">VoicePlay</div>
       </div>
       <div class="header-actions">
-        <button class="icon-btn" id="settings-btn" aria-label="Settings" aria-haspopup="dialog" aria-expanded="false" aria-controls="settings-pop">
+        <button class="icon-btn" id="settings-btn" aria-label="Settings" data-tip="Settings" aria-haspopup="dialog" aria-expanded="false" aria-controls="settings-pop">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.6 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg>
         </button>
         <!-- Window controls; only work in the desktop app -->
@@ -40,69 +39,229 @@
     </header>
 
     <section class="intro">
-      <h1>Choose Your Voice</h1>
+      <h1>Choose Your Voice!</h1>
+      <!-- How long until others hear you; updated from the settings and measured conversion times -->
+      <div class="delay-row" id="delay-row" hidden>
+        <span class="delay" id="delay"></span>
+        <button class="info-btn" id="delay-info-btn" aria-label="How to adjust delay" data-tip="How to adjust delay" aria-haspopup="dialog" aria-expanded="false" aria-controls="delay-pop"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="4.5" r="1.15"/><path d="M8 7.3v4.6"/></svg></button>
+      </div>
+      <p class="status" id="status" role="status"></p>
+      <!-- Startup: shown while the voice server starts and the first voice loads -->
+      <div class="startup" id="startup" hidden>
+        <div class="startup-track" role="progressbar" aria-labelledby="startup-label" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+          <div class="startup-fill"></div>
+        </div>
+        <div class="startup-label" id="startup-label"></div>
+      </div>
     </section>
 
     <section class="voices" id="voices" role="radiogroup" aria-label="Voices"></section>
 
     <section class="talk-bar">
-      <button class="bar-btn" id="tune-btn" aria-label="Audio settings" aria-haspopup="dialog" aria-expanded="false" aria-controls="tune-pop">
+      <button class="bar-btn" id="tune-btn" aria-label="Audio settings" data-tip="Voice adjustments" aria-haspopup="dialog" aria-expanded="false" aria-controls="tune-pop">
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="M4 6.5h16M4 12h16M4 17.5h16"/>
           <circle cx="9" cy="6.5" r="2.6"/><circle cx="15.5" cy="12" r="2.6"/><circle cx="10.5" cy="17.5" r="2.6"/>
         </svg>
       </button>
-      <button class="mic" id="mic-btn" aria-pressed="false" aria-label="Tap to talk">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="2.5" width="6" height="12" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7"/></svg>
-      </button>
+      <!-- The ring spins around the mic while a voice is loading -->
+      <div class="mic-wrap" data-loading="false">
+        <button class="mic" id="mic-btn" aria-pressed="false" aria-label="Tap to talk" data-tip="Start talking in this voice">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="2.5" width="6" height="12" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7"/></svg>
+        </button>
+        <span class="mic-ring" aria-hidden="true"></span>
+      </div>
       <!-- Loopback test: hear your converted voice. Off (slashed) by default. -->
-      <button class="bar-btn" id="listen-btn" aria-pressed="false" aria-label="Hear yourself">
+      <button class="bar-btn" id="listen-btn" aria-pressed="false" aria-label="Hear yourself" data-tip="Hear yourself: play your changed voice on your speakers">
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path class="line" d="M7 9.5a5.5 5.5 0 0 1 11 0c0 3.2-2.6 4.3-3.4 6.3-.6 1.6-.8 2.7-1.6 3.6a2.6 2.6 0 0 1-4.3-1"/>
           <path class="line" d="M10 9.8a2.6 2.6 0 0 1 5.1-.6c.3 1.3-.6 2-1.4 2.6"/>
           <path class="slash" d="M4.5 3.5l15 17"/>
         </svg>
       </button>
+      <!-- Try a voice on an audio file: plays the file converted, never the original -->
+      <button class="bar-btn" id="file-btn" aria-pressed="false" aria-label="Play an audio file in this voice" data-tip="Try this voice on an audio file (.wav or .mp3)">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M9 17.5V5.5l10-2v12"/>
+          <circle cx="6.5" cy="17.5" r="2.6"/><circle cx="16.5" cy="15.5" r="2.6"/>
+        </svg>
+      </button>
+      <input type="file" id="file-input" accept=".wav,.mp3,audio/wav,audio/mpeg" hidden>
     </section>
 
     <!-- Audio settings, opened from the sliders button in the mic bar -->
     <div class="popover popover-tune" id="tune-pop" role="dialog" aria-label="Audio settings" hidden>
-      <label class="field">
-        <span class="field-label">Input</span>
-        <select id="input-device"></select>
-      </label>
-      <label class="field">
-        <span class="field-label">Output</span>
-        <select id="output-device"></select>
-      </label>
-      <label class="field">
-        <span class="field-label">Volume <output id="volume-value">100%</output></span>
-        <input type="range" id="volume" min="0" max="100" step="1" value="100">
-      </label>
-      <label class="field">
-        <span class="field-label">Pitch <output id="pitch-value">0</output></span>
-        <input type="range" id="pitch" min="-12" max="12" step="1" value="0">
-      </label>
+      <!-- Copies of the Microphone settings (global, the same values as in Settings): each
+           control has data-mirror="<id of the original>", see controlCopies in app.js -->
+      <section class="settings-group" aria-labelledby="tune-mic">
+        <h3 class="settings-heading" id="tune-mic">Microphone</h3>
+        <div class="field field-row" data-tip="Filters out background noise like fans, keyboards and hum">
+          <span class="field-label" id="tune-noise-label">Reduce noise</span>
+          <button class="switch" data-mirror="noise" role="switch" aria-checked="false" aria-labelledby="tune-noise-label"></button>
+        </div>
+        <label class="field" data-tip="Turns your mic up or down before the voice is changed">
+          <span class="field-label">Input gain <output data-mirror="input-gain-value">100%</output></span>
+          <input type="range" data-mirror="input-gain" min="10" max="1000" step="10" value="100">
+        </label>
+        <label class="field" data-tip="How quiet a sound can be and still get changed. Lower it if background noise gets through.">
+          <span class="field-label">Sensitivity <output data-mirror="sensitivity-value">99%</output></span>
+          <input type="range" data-mirror="sensitivity" min="0" max="100" step="1" value="99">
+        </label>
+      </section>
+      <section class="settings-group" aria-labelledby="tune-voice">
+        <h3 class="settings-heading" id="tune-voice">This voice</h3>
+        <!-- Each voice keeps its own pitch; the label names the selected voice -->
+        <label class="field" data-tip="Raises or lowers this voice. Each voice remembers its own pitch.">
+          <span class="field-label"><span>Pitch <span class="pitch-voice" id="pitch-voice"></span></span> <output id="pitch-value">0</output></span>
+          <input type="range" id="pitch" min="-30" max="30" step="1" value="0">
+        </label>
+      </section>
+      <!-- Effects on the changed voice; collapsed by default -->
+      <details class="effects" id="effects">
+        <summary>Effects</summary>
+        <div class="effects-list" id="effects-list"></div><!-- filled from EFFECTS in app.js -->
+      </details>
+    </div>
+
+    <!-- How to adjust delay, opened from the "i" next to the estimated delay. The speed slider
+         applies one of SPEED_PRESETS (app.js) to the speed-related settings; it turns yellow
+         (data-custom) when those settings have been changed by hand. -->
+    <div class="popover popover-delay" id="delay-pop" role="dialog" aria-labelledby="delay-pop-title" hidden>
+      <h3 class="popover-title" id="delay-pop-title">How to adjust delay</h3>
+      <p class="popover-text" id="speed-help">Moving this slider automatically adjusts various settings, so don't touch it if you've already made custom changes. “More delay” means smoother and clearer. “Less delay” means faster.</p>
+      <p class="speed-custom-note" id="speed-custom-note" hidden>You've made custom changes to your settings. Moving the slider will replace them.</p>
+      <div class="field speed-field" id="speed-field" data-custom="false">
+        <span class="field-label">Speed <output id="speed-value">Balanced</output></span>
+        <input type="range" id="speed" min="0" max="4" step="1" value="2" aria-describedby="speed-help speed-custom-note">
+        <div class="speed-dots" id="speed-dots" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></div>
+        <div class="speed-ends" aria-hidden="true"><span>Less delay</span><span>More delay</span></div>
+      </div>
     </div>
 
     <!-- App settings, opened from the gear in the header -->
+    <!-- Grouped in the order the sound travels: devices, your mic, the voice, then the
+         performance settings (collapsed; the delay slider covers them for most people). -->
     <div class="popover popover-settings" id="settings-pop" role="dialog" aria-label="Settings" hidden>
-      <div class="field field-row">
-        <span class="field-label" id="noise-label">Reduce noise</span>
-        <button class="switch" id="noise" role="switch" aria-checked="false" aria-labelledby="noise-label"></button>
+      <section class="settings-group" aria-labelledby="settings-devices">
+        <h3 class="settings-heading" id="settings-devices">Audio devices</h3>
+        <label class="field" data-tip="The microphone you talk into">
+          <span class="field-label">Input</span>
+          <select id="input-device"></select>
+        </label>
+        <label class="field" data-tip="Where your changed voice goes. Pick the virtual cable (CABLE Input) so games can hear it.">
+          <span class="field-label">Output</span>
+          <select id="output-device"></select>
+        </label>
+        <label class="field" data-tip="Volume of your changed voice">
+          <span class="field-label">Volume <output id="volume-value">100%</output></span>
+          <input type="range" id="volume" min="0" max="200" step="1" value="100">
+        </label>
+      </section>
+
+      <section class="settings-group" aria-labelledby="settings-mic">
+        <h3 class="settings-heading" id="settings-mic">Microphone</h3>
+        <div class="field field-row" data-tip="Filters out background noise like fans, keyboards and hum">
+          <span class="field-label" id="noise-label">Reduce noise</span>
+          <button class="switch" id="noise" role="switch" aria-checked="false" aria-labelledby="noise-label"></button>
+        </div>
+        <!-- Mic level before conversion (Okada's input gain) -->
+        <label class="field" data-tip="Turns your mic up or down before the voice is changed">
+          <span class="field-label">Input gain <output id="input-gain-value">100%</output></span>
+          <input type="range" id="input-gain" min="10" max="1000" step="10" value="100">
+        </label>
+        <!-- The server's noise gate (Okada's "S.Thresh"), inverted: lower means quiet sounds are ignored -->
+        <label class="field" data-tip="How quiet a sound can be and still get changed. Lower it if background noise gets through.">
+          <span class="field-label">Sensitivity <output id="sensitivity-value">99%</output></span>
+          <input type="range" id="sensitivity" min="0" max="100" step="1" value="99">
+        </label>
+      </section>
+
+      <section class="settings-group" aria-labelledby="settings-voice">
+        <h3 class="settings-heading" id="settings-voice">Voice</h3>
+        <!-- How much the voice's .index file shapes the sound (Okada's "Index") -->
+        <label class="field" data-tip="How strongly the voice's accent and tone are applied. Higher sounds more like the voice but can add glitches.">
+          <span class="field-label">Index <output id="index-ratio-value">75%</output></span>
+          <input type="range" id="index-ratio" min="0" max="100" step="5" value="75">
+        </label>
+        <!-- Keeps consonants and breaths clear; only works while Index is on -->
+        <label class="field" data-tip="Keeps consonants and breaths clear. Higher is clearer but lets more of your own voice through.">
+          <span class="field-label">Protect <output id="protect-value">33%</output></span>
+          <input type="range" id="protect" min="0" max="100" step="1" value="33">
+        </label>
+      </section>
+
+      <!-- Collapsed by default: the delay slider sets most of these -->
+      <details class="collapsible settings-advanced">
+        <summary><span class="settings-heading">Performance <span class="settings-badge">Advanced</span></span></summary>
+        <div class="settings-group">
+          <p class="settings-hint">Most people only need the delay slider (the <strong>i</strong> next to your estimated delay).</p>
+          <label class="field" data-tip="How much audio is changed at a time. Lower means less delay, higher usually means better quality.">
+            <span class="field-label">Chunk</span>
+            <select id="chunk"></select>
+          </label>
+          <!-- Okada's "EXTRA" (extraConvertSize): earlier audio given to the model as context -->
+          <label class="field" data-tip="How much earlier audio the voice listens to for context. More can make words clearer (like “pl” and “bl” sounds) but uses more GPU. Doesn't add delay.">
+            <span class="field-label">Extra</span>
+            <select id="extra"></select>
+          </label>
+          <!-- crossFadeOverlapSize: how much each converted chunk blends into the next -->
+          <label class="field" data-tip="How much each piece of audio blends into the next. Raise it if you hear clicks or stutters between pieces. Higher adds a little delay.">
+            <span class="field-label">Crossfade</span>
+            <select id="crossfade"></select>
+          </label>
+          <!-- Okada's rvcQuality -->
+          <div class="field field-row" data-tip="Changes each piece of audio more carefully for slightly better sound. Uses more GPU.">
+            <span class="field-label" id="high-quality-label">High quality</span>
+            <button class="switch" id="high-quality" role="switch" aria-checked="false" aria-labelledby="high-quality-label"></button>
+          </div>
+          <!-- Okada's silenceFront, inverted: on = also track pitch in the Extra audio (silenceFront 0) -->
+          <div class="field field-row" data-tip="Also tracks your pitch in the Extra audio. Turn on if the pitch wobbles between pieces of audio. Uses more GPU.">
+            <span class="field-label" id="track-pitch-label">Track Pitch</span>
+            <button class="switch" id="track-pitch" role="switch" aria-checked="false" aria-labelledby="track-pitch-label"></button>
+          </div>
+          <!-- The server's f0Detector -->
+          <label class="field" data-tip="How your pitch is detected. Fast takes about a third less GPU time per piece of audio, but may follow your pitch a little less closely.">
+            <span class="field-label">Pitch detection</span>
+            <select id="f0-detector">
+              <option value="rmvpe_onnx">Accurate (RMVPE)</option>
+              <option value="fcpe">Fast (FCPE)</option>
+            </select>
+          </label>
+          <label class="field" data-tip="Which graphics card changes your voice. CPU works but is much slower.">
+            <span class="field-label">GPU</span>
+            <select id="gpu"></select>
+          </label>
+        </div>
+      </details>
+
+      <!-- Opens the logs folder (electron/log.js) for bug reports -->
+      <div class="settings-footer">
+        <button class="text-btn" id="open-logs" data-tip="Opens the folder with VoicePlay's log files. Send them with your bug report.">Report a problem…</button>
       </div>
-      <label class="field">
-        <span class="field-label">GPU</span>
-        <select id="gpu"></select>
-      </label>
-      <label class="field">
-        <span class="field-label">Chunk</span>
-        <select id="chunk"></select>
-      </label>
     </div>
+
+    <!-- First run: sets the starting pitch from the user's natural voice -->
+    <dialog class="onboarding" id="onboarding" aria-labelledby="onboarding-title">
+      <img class="onboarding-logo" src="assets/logo.svg" alt="">
+      <h2 id="onboarding-title">Welcome to VoicePlay</h2>
+      <p>What does your natural voice sound like? We'll set each voice's pitch to match. You can change it any time in voice adjustments.</p>
+      <div class="onboarding-choices">
+        <button class="choice" data-range="deeper" data-tip="Male voices keep your pitch (0). Female voices are raised (+14).">
+          <span class="choice-title">Deeper</span>
+          <span class="choice-sub">Masculine range</span>
+        </button>
+        <button class="choice" data-range="higher" data-tip="Female voices keep your pitch (0). Male voices are lowered by an octave (−12).">
+          <span class="choice-title">Higher</span>
+          <span class="choice-sub">Feminine range</span>
+        </button>
+      </div>
+    </dialog>
   </main>
 
+  <div class="tooltip" id="tooltip" role="tooltip" aria-hidden="true" hidden></div>
+
   <script src="cable.js"></script>
+  <script src="audio.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
